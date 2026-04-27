@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>女作家特展</title>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
-        // --- [請填入你的 Firebase 設定] ---
+        // --- [請在此填入你的 Firebase 設定] ---
         const firebaseConfig = {
             apiKey: "AIzaSyDNzDjniJp7l4NJXFkCHmMxaNNXdAx4bBI",
             authDomain: "my-exhibition-68093.firebaseapp.com",
@@ -23,50 +24,114 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // 綁定按鈕事件
+        // 送出資料邏輯
         window.submitData = function() {
             const name = document.getElementById('userName').value;
             const answer = document.getElementById('userAnswer').value;
-            
-            if (name === "" || answer === "") {
-                alert("請完整填寫");
-                return;
-            }
+            if (!name || !answer) { alert("請填寫名稱與回答"); return; }
 
-            // 推送到 Firebase
-            push(ref(db, 'answers'), {
-                name: name,
-                answer: answer,
-                timestamp: Date.now()
-            }).then(() => {
-                alert("成功送出！");
-                document.getElementById('userAnswer').value = ""; // 清空輸入框
+            push(ref(db, 'answers'), { name, answer, timestamp: Date.now() })
+            .then(() => {
+                document.getElementById('cardName').innerText = name;
+                document.getElementById('cardAnswer').innerText = `「${answer}」`;
+                document.getElementById('step2').classList.add('hidden');
+                document.getElementById('step3').classList.remove('hidden');
+            });
+        };
+
+        // 下載圖片邏輯
+        window.downloadCard = function() {
+            const area = document.getElementById('capture-area');
+            html2canvas(area, { scale: 3 }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `文學詩籤-${document.getElementById('cardName').innerText}.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
             });
         };
     </script>
 
     <style>
-        body { font-family: sans-serif; background: #fff; color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { width: 80%; max-width: 400px; text-align: center; }
-        h2 { font-weight: 200; letter-spacing: 5px; }
-        input, textarea { width: 100%; border: none; border-bottom: 1px solid #ccc; padding: 10px; margin: 10px 0; outline: none; }
-        button { background: #000; color: #fff; padding: 10px 30px; border: none; cursor: pointer; margin-top: 20px; }
+        :root { --paper: #f4f0e6; --ink: #2c2c2c; --border: #d1c7b7; }
+        body { font-family: "Noto Serif TC", serif; background: #e8e4d8; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--ink); }
+        .container { width: 85%; max-width: 400px; text-align: center; background: #fff; padding: 40px 20px; border-radius: 2px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+        h2 { font-weight: 400; letter-spacing: 6px; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        input, textarea { width: 100%; border: 1px solid #eee; padding: 12px; margin-bottom: 20px; outline: none; background: #fafafa; box-sizing: border-box; }
+        button { background: var(--ink); color: #fff; padding: 14px; border: none; letter-spacing: 2px; cursor: pointer; width: 100%; font-size: 16px; }
         .hidden { display: none; }
+
+        /* 詩籤風格設定 */
+        .poem-card-wrapper { padding: 10px; background: white; margin-bottom: 20px; }
+        .poem-card {
+            background-color: var(--paper);
+            background-image: radial-gradient(#dcd7ca 1px, transparent 1px);
+            background-size: 20px 20px; /* 微小的紙張纖維感 */
+            padding: 50px 30px;
+            border: 1px solid var(--border);
+            outline: 4px solid var(--paper);
+            outline-offset: -12px;
+            position: relative;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+        .poem-card::after {
+            content: "";
+            position: absolute;
+            top: 15px; bottom: 15px; left: 15px; right: 15px;
+            border: 1px solid var(--border);
+            pointer-events: none;
+        }
+        #cardAnswer {
+            font-size: 1.5rem;
+            line-height: 2.2;
+            margin-bottom: 40px;
+            font-weight: 500;
+            z-index: 1;
+            color: #1a1a1a;
+            text-align: center;
+        }
+        #cardName {
+            font-size: 0.9rem;
+            letter-spacing: 3px;
+            color: #777;
+            text-align: right;
+            z-index: 1;
+            border-top: 1px solid var(--border);
+            display: inline-block;
+            align-self: flex-end;
+            padding-top: 5px;
+        }
+        .btn-download { background: #8b7e66; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div id="step1" class="container">
         <h2>女作家特展</h2>
-        <input type="text" id="userName" placeholder="請輸入使用者名稱">
+        <input type="text" id="userName" placeholder="請輸入你的名稱" maxlength="10">
         <button onclick="document.getElementById('step1').classList.add('hidden'); document.getElementById('step2').classList.remove('hidden');">開始創作</button>
     </div>
 
     <div id="step2" class="container hidden">
+        <h2>提問</h2>
+        <p style="font-size: 15px; color: #555; margin-bottom: 20px;">你認為文學創作像什麼？</p>
+        <textarea id="userAnswer" rows="4" placeholder="像一場無止盡的馬拉松..."></textarea>
+        <button onclick="submitData()">送出並下載文學詩籤</button>
+    </div>
+
+    <div id="step3" class="container hidden">
         <h2>女作家特展</h2>
-        <p>你認為文學創作像什麼？</p>
-        <textarea id="userAnswer" rows="3"></textarea>
-        <button onclick="submitData()">送出想法</button>
+        <div class="poem-card-wrapper" id="capture-area">
+            <div class="poem-card">
+                <div id="cardAnswer">「載入中」</div>
+                <div id="cardName">署名</div>
+            </div>
+        </div>
+        <button class="btn-download" onclick="downloadCard()">下載我的文學詩籤</button>
+        <button style="background:none; color:#aaa; margin-top:15px; font-size:13px;" onclick="location.reload()">重新輸入</button>
     </div>
 
 </body>
