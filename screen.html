@@ -51,28 +51,29 @@
         });
 
         function displayMessage(name, answer, index, key) {
-            // 移除該網格位置上「舊的」卡片 (不論 key 是什麼)
             const oldCardAtGrid = document.getElementById(`grid-${index}`);
-            if (oldCardAtGrid) oldCardAtGrid.remove();
+    if (oldCardAtGrid) oldCardAtGrid.remove();
 
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.id = `grid-${index}`;
-            card.setAttribute('data-key', key); // 綁定 Firebase 的 key
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.id = `grid-${index}`;
+    card.setAttribute('data-key', key);
 
-            const col = index % cols;
-            const row = Math.floor(index / cols);
-            
-            // 16 格精確計算：寬度 25%, 高度 25%
-            card.style.left = (col * 25) + '%';
-            card.style.top = (row * 25) + '%';
-            
-            card.innerHTML = `
-                <div class="answer">「${answer}」</div>
-                <div class="author">— ${name}</div>
-            `;
-            
-            document.body.appendChild(card);
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    
+    card.style.left = (col * 25) + '%';
+    card.style.top = (row * 25) + '%';
+    
+    // 重點修改：將回答與署名放在同一個內容區塊中
+    card.innerHTML = `
+        <div class="content">
+            <span class="answer">「${answer}」</span>
+            <span class="author">— ${name}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(card);
         }
     </script>
     <style>
