@@ -116,12 +116,39 @@
     </div>
 
     <div id="step2" class="container hidden">
-        <h2>提問</h2>
-        <p style="font-size: 15px; color: #555; margin-bottom: 20px;">你認為文學創作像什麼？</p>
-        <textarea id="userAnswer" rows="4" placeholder="像一場無止盡的馬拉松..."></textarea>
-        <button onclick="submitData()">送出並下載文學詩籤</button>
+    <h2>提問</h2>
+    <p style="font-size: 15px; color: #555; margin-bottom: 20px;">你認為文學創作像什麼？</p>
+    
+    <textarea id="userAnswer" rows="4" 
+              placeholder="在此留下您的筆墨..." 
+              maxlength="100" 
+              oninput="updateCount()"></textarea>
+    
+    <div id="charCount" style="text-align: right; font-size: 12px; color: #aaa; margin-top: -15px; margin-bottom: 20px;">
+        0 / 100
     </div>
 
+    <button onclick="submitData()">送出並封存詩籤</button>
+</div>
+
+<script>
+    // 新增：更新字數顯示的 function
+    function updateCount() {
+        const textarea = document.getElementById('userAnswer');
+        const countDisplay = document.getElementById('charCount');
+        const currentLength = textarea.value.length;
+        countDisplay.innerText = `${currentLength} / 100`;
+        
+        // 當快滿時改變顏色提示
+        if (currentLength >= 90) {
+            countDisplay.style.color = "#8b7e66"; // 接近限制時變色
+        } else {
+            countDisplay.style.color = "#aaa";
+        }
+    }
+
+    // (其餘 Firebase 邏輯保持不變...)
+</script>
     <div id="step3" class="container hidden">
         <h2>女作家特展</h2>
         <div class="poem-card-wrapper" id="capture-area">
