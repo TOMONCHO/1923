@@ -5,9 +5,9 @@
     <title>女作家特展</title>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getDatabase, ref, onChildAdded } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+        import { getDatabase, ref, onChildAdded, onChildRemoved } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
-        // --- [請填入你的 Firebase 設定 - 需與手機端一致] ---
+        // --- [請填入你的 Firebase 設定] ---
         const firebaseConfig = {
             apiKey: "AIzaSyDNzDjniJp7l4NJXFkCHmMxaNNXdAx4bBI",
             authDomain: "my-exhibition-68093.firebaseapp.com",
@@ -21,25 +21,52 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const wall = document.getElementById('wall');
+        
+        // 網格系統設定 (將螢幕切分為 4x3 共 12 格)
+        const rows = 3;
+        const cols = 4;
+        let grid = Array(rows * cols).fill(false); // 追蹤哪些格子被佔用了
 
-        // 監聽新資料加入
         const answersRef = ref(db, 'answers');
+
         onChildAdded(answersRef, (snapshot) => {
             const data = snapshot.val();
-            displayMessage(data.name, data.answer);
+            const now = Date.now();
+            const threeHours = 3 * 60 * 60 * 1000;
+
+            // 邏輯 4：如果留言超過 3 小時，就不顯示 (自動重置)
+            if (now - data.timestamp < threeHours) {
+                displayMessage(data.name, data.answer, snapshot.key);
+            }
         });
 
-        function displayMessage(name, answer) {
+        function displayMessage(name, answer, id) {
+            // 邏輯 2：尋找空的網格位置
+            let availableIndices = grid.map((val, idx) => val === false ? idx : null).filter(val => val !== null);
+            
+            if (availableIndices.length === 0) {
+                // 如果格子滿了，強制移除畫面上的第一個舊留言來騰出空間
+                const oldestCard = document.querySelector('.card');
+                if(oldestCard) oldestCard.remove();
+                grid = grid.fill(false); // 重設網格狀態
+                availableIndices = [0];
+            }
+
+            const randomIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+            grid[randomIdx] = true; // 標記此格已被佔用
+
             const card = document.createElement('div');
             card.className = 'card';
-            
-            // 隨機位置出現 (避免重疊太嚴重)
-            const posX = Math.random() * (window.innerWidth - 300);
-            const posY = Math.random() * (window.innerHeight - 200);
-            
-            card.style.left = posX + 'px';
-            card.style.top = posY + 'px';
+            card.id = `card-${id}`;
+
+            // 計算網格座標
+            const col = randomIdx % cols;
+            const row = Math.floor(randomIdx / cols);
+            const x = (col * (100 / cols)) + 2; // 留點邊距
+            const y = (row * (100 / rows)) + 5;
+
+            card.style.left = x + '%';
+            card.style.top = y + '%';
             
             card.innerHTML = `
                 <div class="answer">「${answer}」</div>
@@ -48,20 +75,23 @@
             
             document.body.appendChild(card);
 
-            // 隨時間自動消失或保持精簡感
+            // 當這則留言消失時，釋放網格
             setTimeout(() => {
                 card.style.opacity = '0';
-                setTimeout(() => card.remove(), 2000);
-            }, 15000); // 90秒後消失
+                setTimeout(() => {
+                    card.remove();
+                    grid[randomIdx] = false; // 釋放網格
+                }, 2000);
+            }, 600000); // 10分鐘後消失，騰出空間給新朋友
         }
     </script>
     <style>
         body {
-            background-color: #000; /* 深色背景更具現代感 */
+            background: #000;
             color: #fff;
             margin: 0;
             overflow: hidden;
-            font-family: "PingFang TC", sans-serif;
+            font-family: "Noto Serif TC", serif;
             width: 100vw;
             height: 100vh;
         }
@@ -70,37 +100,38 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 3rem;
+            font-size: 8vw;
             font-weight: 100;
-            letter-spacing: 15px;
-            color: rgba(255, 255, 255, 0.1);
-            z-index: 0;
+            letter-spacing: 20px;
+            color: rgba(255, 255, 255, 0.05);
+            pointer-events: none;
         }
         .card {
             position: absolute;
-            width: 300px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border-left: 1px solid rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(5px);
-            animation: fadeIn 2s ease-out forwards;
-            z-index: 10;
+            width: 20%; /* 根據網格調整寬度 */
+            padding: 25px;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 2px solid #8b7e66;
+            backdrop-filter: blur(8px);
+            animation: inkFlow 3s ease-out forwards;
+            transition: opacity 2s;
         }
         .answer {
-            font-size: 1.2rem;
-            line-height: 1.6;
-            margin-bottom: 10px;
+            font-size: 1.4rem;
+            line-height: 1.8;
+            margin-bottom: 15px;
             letter-spacing: 1px;
+            color: #ececec;
         }
         .author {
-            font-size: 0.8rem;
-            color: #888;
+            font-size: 0.9rem;
+            color: #8b7e66;
             text-align: right;
-            text-transform: uppercase;
+            font-style: italic;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes inkFlow {
+            from { opacity: 0; transform: translateY(30px) scale(0.95); filter: blur(10px); }
+            to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
         }
     </style>
 </head>
