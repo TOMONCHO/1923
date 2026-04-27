@@ -22,51 +22,50 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         
-        // 網格系統設定 (將螢幕切分為 4x3 共 12 格)
-        const rows = 3;
-        const cols = 4;
-        let grid = Array(rows * cols).fill(false); // 追蹤哪些格子被佔用了
+        const rows = 4; // 修改為 4 列
+        const cols = 4; // 修改為 4 欄
+        let currentIndex = 0; 
 
         const answersRef = ref(db, 'answers');
 
+        // 監聽新留言
         onChildAdded(answersRef, (snapshot) => {
             const data = snapshot.val();
             const now = Date.now();
             const threeHours = 3 * 60 * 60 * 1000;
 
-            // 邏輯 4：如果留言超過 3 小時，就不顯示 (自動重置)
             if (now - data.timestamp < threeHours) {
-                displayMessage(data.name, data.answer, snapshot.key);
+                // 傳入 snapshot.key 以便後續追蹤刪除
+                displayMessage(data.name, data.answer, currentIndex, snapshot.key);
+                currentIndex = (currentIndex + 1) % (rows * cols);
             }
         });
 
-        function displayMessage(name, answer, id) {
-            // 邏輯 2：尋找空的網格位置
-            let availableIndices = grid.map((val, idx) => val === false ? idx : null).filter(val => val !== null);
-            
-            if (availableIndices.length === 0) {
-                // 如果格子滿了，強制移除畫面上的第一個舊留言來騰出空間
-                const oldestCard = document.querySelector('.card');
-                if(oldestCard) oldestCard.remove();
-                grid = grid.fill(false); // 重設網格狀態
-                availableIndices = [0];
+        // 加碼功能：監聽後端刪除動作 (當你在 Firebase 手動刪除，螢幕會立刻清空對應卡片)
+        onChildRemoved(answersRef, (snapshot) => {
+            const targetCard = document.querySelector(`[data-key="${snapshot.key}"]`);
+            if (targetCard) {
+                targetCard.style.opacity = '0';
+                setTimeout(() => targetCard.remove(), 1000);
             }
+        });
 
-            const randomIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
-            grid[randomIdx] = true; // 標記此格已被佔用
+        function displayMessage(name, answer, index, key) {
+            // 移除該網格位置上「舊的」卡片 (不論 key 是什麼)
+            const oldCardAtGrid = document.getElementById(`grid-${index}`);
+            if (oldCardAtGrid) oldCardAtGrid.remove();
 
             const card = document.createElement('div');
             card.className = 'card';
-            card.id = `card-${id}`;
+            card.id = `grid-${index}`;
+            card.setAttribute('data-key', key); // 綁定 Firebase 的 key
 
-            // 計算網格座標
-            const col = randomIdx % cols;
-            const row = Math.floor(randomIdx / cols);
-            const x = (col * (100 / cols)) + 2; // 留點邊距
-            const y = (row * (100 / rows)) + 5;
-
-            card.style.left = x + '%';
-            card.style.top = y + '%';
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+            
+            // 16 格精確計算：寬度 25%, 高度 25%
+            card.style.left = (col * 25) + '%';
+            card.style.top = (row * 25) + '%';
             
             card.innerHTML = `
                 <div class="answer">「${answer}」</div>
@@ -74,15 +73,6 @@
             `;
             
             document.body.appendChild(card);
-
-            // 當這則留言消失時，釋放網格
-            setTimeout(() => {
-                card.style.opacity = '0';
-                setTimeout(() => {
-                    card.remove();
-                    grid[randomIdx] = false; // 釋放網格
-                }, 2000);
-            }, 600000); // 10分鐘後消失，騰出空間給新朋友
         }
     </script>
     <style>
@@ -91,47 +81,50 @@
             color: #fff;
             margin: 0;
             overflow: hidden;
-            font-family: "Noto Serif TC", serif;
+            font-family: "Noto Serif TC", "Source Han Serif TW", serif;
             width: 100vw;
             height: 100vh;
         }
         .title {
             position: absolute;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 8vw;
-            font-weight: 100;
-            letter-spacing: 20px;
-            color: rgba(255, 255, 255, 0.05);
+            font-size: 5vw;
+            letter-spacing: 25px;
+            color: rgba(255, 255, 255, 0.03);
             pointer-events: none;
+            white-space: nowrap;
         }
         .card {
             position: absolute;
-            width: 20%; /* 根據網格調整寬度 */
-            padding: 25px;
-            background: rgba(255, 255, 255, 0.03);
-            border-left: 2px solid #8b7e66;
-            backdrop-filter: blur(8px);
-            animation: inkFlow 3s ease-out forwards;
-            transition: opacity 2s;
+            width: 25vw; 
+            height: 25vh; 
+            padding: 20px;
+            box-sizing: border-box;
+            border: 0.2px solid rgba(255,255,255,0.05); 
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: opacity 1s ease;
+            animation: inkFade 2s ease-out;
         }
         .answer {
-            font-size: 1.4rem;
-            line-height: 1.8;
-            margin-bottom: 15px;
-            letter-spacing: 1px;
-            color: #ececec;
+            font-size: 1.1rem; /* 稍微縮小字體以適應 16 格 */
+            line-height: 1.6;
+            margin-bottom: 8px;
+            color: #d1c7b7;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
         .author {
-            font-size: 0.9rem;
+            font-size: 0.75rem;
             color: #8b7e66;
             text-align: right;
-            font-style: italic;
+            letter-spacing: 1px;
         }
-        @keyframes inkFlow {
-            from { opacity: 0; transform: translateY(30px) scale(0.95); filter: blur(10px); }
-            to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        @keyframes inkFade {
+            from { opacity: 0; transform: scale(0.98); filter: brightness(2); }
+            to { opacity: 1; transform: scale(1); filter: brightness(1); }
         }
     </style>
 </head>
