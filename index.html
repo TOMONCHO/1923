@@ -9,7 +9,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
-        // --- [請在此填入你的 Firebase 設定] ---
+        // --- [Firebase 設定] ---
         const firebaseConfig = {
             apiKey: "AIzaSyDNzDjniJp7l4NJXFkCHmMxaNNXdAx4bBI",
             authDomain: "my-exhibition-68093.firebaseapp.com",
@@ -19,12 +19,10 @@
             messagingSenderId: "675697612488",
             appId: "1:675697612488:web:935bfd1cdc96f120f5f7fd"
         };
-        // ----------------------------------
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // 送出資料邏輯
         window.submitData = function() {
             const name = document.getElementById('userName').value;
             const answer = document.getElementById('userAnswer').value;
@@ -39,7 +37,6 @@
             });
         };
 
-        // 下載圖片邏輯
         window.downloadCard = function() {
             const area = document.getElementById('capture-area');
             html2canvas(area, { scale: 3 }).then(canvas => {
@@ -53,11 +50,40 @@
 
     <style>
         :root { --paper: #f4f0e6; --ink: #2c2c2c; --border: #d1c7b7; }
-        body { font-family: "Noto Serif TC", serif; background: #e8e4d8; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: var(--ink); }
-        .container { width: 85%; max-width: 400px; text-align: center; background: #fff; padding: 40px 20px; border-radius: 2px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
-        h2 { font-weight: 400; letter-spacing: 6px; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        input, textarea { width: 100%; border: 1px solid #eee; padding: 12px; margin-bottom: 20px; outline: none; background: #fafafa; box-sizing: border-box; }
-        button { background: var(--ink); color: #fff; padding: 14px; border: none; letter-spacing: 2px; cursor: pointer; width: 100%; font-size: 16px; }
+        
+        body { 
+            font-family: "Noto Serif TC", serif; 
+            margin: 0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            color: var(--ink);
+            
+            /* --- 背景圖片設定區 --- */
+            background-image: url('主視覺橫式.jpg'); /* 請在此填入圖片路徑 */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        .container { 
+            width: 85%; 
+            max-width: 400px; 
+            text-align: center; 
+            /* 使用微透明白色，兼顧美感與易讀性 */
+            background: rgba(255, 255, 255, 0.9); 
+            padding: 40px 20px; 
+            border-radius: 4px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2); 
+            box-sizing: border-box;
+        }
+
+        h2 { font-weight: 400; letter-spacing: 6px; margin-bottom: 30px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        input, textarea { width: 100%; border: 1px solid #ccc; padding: 12px; margin-bottom: 20px; outline: none; background: #fff; box-sizing: border-box; font-family: inherit; }
+        button { background: var(--ink); color: #fff; padding: 14px; border: none; letter-spacing: 2px; cursor: pointer; width: 100%; font-size: 16px; border-radius: 2px; }
+        button:active { opacity: 0.8; }
         .hidden { display: none; }
 
         /* 詩籤風格設定 */
@@ -65,7 +91,7 @@
         .poem-card {
             background-color: var(--paper);
             background-image: radial-gradient(#dcd7ca 1px, transparent 1px);
-            background-size: 20px 20px; /* 微小的紙張纖維感 */
+            background-size: 20px 20px;
             padding: 50px 30px;
             border: 1px solid var(--border);
             outline: 4px solid var(--paper);
@@ -84,26 +110,8 @@
             border: 1px solid var(--border);
             pointer-events: none;
         }
-        #cardAnswer {
-            font-size: 1.5rem;
-            line-height: 2.2;
-            margin-bottom: 40px;
-            font-weight: 500;
-            z-index: 1;
-            color: #1a1a1a;
-            text-align: center;
-        }
-        #cardName {
-            font-size: 0.9rem;
-            letter-spacing: 3px;
-            color: #777;
-            text-align: right;
-            z-index: 1;
-            border-top: 1px solid var(--border);
-            display: inline-block;
-            align-self: flex-end;
-            padding-top: 5px;
-        }
+        #cardAnswer { font-size: 1.5rem; line-height: 2.2; margin-bottom: 40px; font-weight: 500; z-index: 1; color: #1a1a1a; text-align: center; }
+        #cardName { font-size: 0.9rem; letter-spacing: 3px; color: #777; text-align: right; z-index: 1; border-top: 1px solid var(--border); display: inline-block; align-self: flex-end; padding-top: 5px; }
         .btn-download { background: #8b7e66; margin-top: 10px; }
     </style>
 </head>
@@ -116,39 +124,13 @@
     </div>
 
     <div id="step2" class="container hidden">
-    <h2>女作家特展</h2>
-    <p style="font-size: 15px; color: #555; margin-bottom: 20px;">你認為文學創作像什麼？</p>
-    
-    <textarea id="userAnswer" rows="4" 
-              placeholder="像一場沒有盡頭的旅程" 
-              maxlength="100" 
-              oninput="updateCount()"></textarea>
-    
-    <div id="charCount" style="text-align: right; font-size: 12px; color: #aaa; margin-top: -15px; margin-bottom: 20px;">
-        0 / 100
+        <h2>女作家特展</h2>
+        <p style="font-size: 15px; color: #555; margin-bottom: 20px;">你認為文學創作像什麼？</p>
+        <textarea id="userAnswer" rows="4" placeholder="像一場沒有盡頭的旅程" maxlength="100" oninput="updateCount()"></textarea>
+        <div id="charCount" style="text-align: right; font-size: 12px; color: #aaa; margin-top: -15px; margin-bottom: 20px;">0 / 100</div>
+        <button onclick="submitData()">送出並下載我的文學詩籤</button>
     </div>
 
-    <button onclick="submitData()">送出並下載我的文學詩籤</button>
-</div>
-
-<script>
-    // 新增：更新字數顯示的 function
-    function updateCount() {
-        const textarea = document.getElementById('userAnswer');
-        const countDisplay = document.getElementById('charCount');
-        const currentLength = textarea.value.length;
-        countDisplay.innerText = `${currentLength} / 100`;
-        
-        // 當快滿時改變顏色提示
-        if (currentLength >= 90) {
-            countDisplay.style.color = "#8b7e66"; // 接近限制時變色
-        } else {
-            countDisplay.style.color = "#aaa";
-        }
-    }
-
-    // (其餘 Firebase 邏輯保持不變...)
-</script>
     <div id="step3" class="container hidden">
         <h2>女作家特展</h2>
         <div class="poem-card-wrapper" id="capture-area">
@@ -160,6 +142,20 @@
         <button class="btn-download" onclick="downloadCard()">下載我的文學詩籤</button>
         <button style="background:none; color:#aaa; margin-top:15px; font-size:13px;" onclick="location.reload()">重新輸入</button>
     </div>
+
+    <script>
+        function updateCount() {
+            const textarea = document.getElementById('userAnswer');
+            const countDisplay = document.getElementById('charCount');
+            const currentLength = textarea.value.length;
+            countDisplay.innerText = `${currentLength} / 100`;
+            if (currentLength >= 90) {
+                countDisplay.style.color = "#8b7e66";
+            } else {
+                countDisplay.style.color = "#aaa";
+            }
+        }
+    </script>
 
 </body>
 </html>
