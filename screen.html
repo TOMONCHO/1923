@@ -7,7 +7,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getDatabase, ref, onChildAdded, onChildRemoved } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
-        // --- [請填入你的 Firebase 設定] ---
         const firebaseConfig = {
             apiKey: "AIzaSyDNzDjniJp7l4NJXFkCHmMxaNNXdAx4bBI",
             authDomain: "my-exhibition-68093.firebaseapp.com",
@@ -17,31 +16,28 @@
             messagingSenderId: "675697612488",
             appId: "1:675697612488:web:935bfd1cdc96f120f5f7fd"
         };
-        // ----------------------------------
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         
-        const rows = 4; // 修改為 4 列
-        const cols = 4; // 修改為 4 欄
+        const rows = 4;
+        const cols = 4;
         let currentIndex = 0; 
+        let rotationStep = 0;
 
         const answersRef = ref(db, 'answers');
 
-        // 監聽新留言
         onChildAdded(answersRef, (snapshot) => {
             const data = snapshot.val();
             const now = Date.now();
             const threeHours = 3 * 60 * 60 * 1000;
 
             if (now - data.timestamp < threeHours) {
-                // 傳入 snapshot.key 以便後續追蹤刪除
                 displayMessage(data.name, data.answer, currentIndex, snapshot.key);
                 currentIndex = (currentIndex + 1) % (rows * cols);
             }
         });
 
-        // 加碼功能：監聽後端刪除動作 (當你在 Firebase 手動刪除，螢幕會立刻清空對應卡片)
         onChildRemoved(answersRef, (snapshot) => {
             const targetCard = document.querySelector(`[data-key="${snapshot.key}"]`);
             if (targetCard) {
@@ -52,29 +48,44 @@
 
         function displayMessage(name, answer, index, key) {
             const oldCardAtGrid = document.getElementById(`grid-${index}`);
-    if (oldCardAtGrid) oldCardAtGrid.remove();
+            if (oldCardAtGrid) {
+                oldCardAtGrid.remove();
+            }
 
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.id = `grid-${index}`;
-    card.setAttribute('data-key', key);
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.id = `grid-${index}`;
+            card.setAttribute('data-key', key);
 
-    const col = index % cols;
-    const row = Math.floor(index / cols);
-    
-    card.style.left = (col * 25) + '%';
-    card.style.top = (row * 25) + '%';
-    
-    // 重點修改：將回答與署名放在同一個內容區塊中
-    card.innerHTML = `
-        <div class="content">
-            <span class="answer">「${answer}」</span>
-            <span class="author">— ${name}</span>
-        </div>
-    `;
-    
-    document.body.appendChild(card);
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+            card.style.left = (col * 25) + '%';
+            card.style.top = (row * 25) + '%';
+            
+            card.innerHTML = `
+                <div class="inner-content">
+                    <span class="answer">「${answer}」</span>
+                    <span class="author">— ${name}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(card);
         }
+
+        setInterval(() => {
+            const allContent = document.querySelectorAll('.inner-content');
+            if (allContent.length === 0) return;
+
+            rotationStep = rotationStep % allContent.length;
+            const target = allContent[rotationStep];
+
+            target.classList.remove('is-breathing');
+            void target.offsetWidth; 
+            target.classList.add('is-breathing');
+
+            rotationStep++;
+        }, 5000);
+
     </script>
     <style>
         body {
@@ -85,6 +96,8 @@
             font-family: "Noto Serif TC", "Source Han Serif TW", serif;
             width: 100vw;
             height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
         .title {
             position: absolute;
@@ -100,32 +113,118 @@
             position: absolute;
             width: 25vw; 
             height: 25vh; 
-            padding: 20px;
+            padding: 0; 
             box-sizing: border-box;
-            border: 0.2px solid rgba(255,255,255,0.05); 
-            background: rgba(0, 0, 0, 0.2);
+            border: 0.1px solid rgba(255,255,255,0.03); 
+            background: transparent;
+            animation: inkAppear 3s ease-out forwards;
+        }
+
+        .inner-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            padding: 30px 45px; 
             display: flex;
             flex-direction: column;
             justify-content: center;
-            transition: opacity 1s ease;
-            animation: inkFade 2s ease-out;
+            
+            /* 基礎縮放與渲染優化 */
+            transform: scale(0.9) translateZ(0);
+            backface-visibility: hidden;
+            will-change: transform;
+            
+            transform-origin: center center;
+            z-index: 1;
         }
+
+        /* 背景光暈偽元素 */
+        .inner-content::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            width: 220px; 
+            height: 220px;
+            background: radial-gradient(circle, rgba(209, 199, 183, 0.5) 0%, rgba(209, 199, 183, 0) 75%);
+            border-radius: 50%;
+            opacity: 0;
+            z-index: -1;
+            transition: none; /* 徹底移除 transition 確保同步 */
+            pointer-events: none;
+        }
+
+        .inner-content.is-breathing::before {
+            animation: bgGlowBreath 7s ease-in-out forwards;
+        }
+
+        .inner-content.is-breathing {
+            animation: textBreath 7s ease-in-out forwards;
+        }
+
         .answer {
-            font-size: 1.1rem; /* 稍微縮小字體以適應 16 格 */
-            line-height: 1.6;
-            margin-bottom: 8px;
+            display: block;
+            font-size: 1.20rem;
+            line-height: 1.8;
+            margin-bottom: 12px;
             color: #d1c7b7;
-            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+            text-align: center;
+            transform: translateZ(0);
         }
         .author {
-            font-size: 0.75rem;
+            display: block;
+            font-size: 1.0rem;
             color: #8b7e66;
             text-align: right;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
         }
-        @keyframes inkFade {
-            from { opacity: 0; transform: scale(0.98); filter: brightness(2); }
-            to { opacity: 1; transform: scale(1); filter: brightness(1); }
+
+        /* 背景光暈動畫：優化啟動速度 */
+        @keyframes bgGlowBreath {
+            0% { 
+                opacity: 0; 
+                transform: translate(-50%, -50%) scale(0.9) translateZ(0); 
+            }
+            15% {
+                opacity: 1; /* 提前在 15% 時完全顯示，確保文字一動就有光 */
+            }
+            50% { 
+                opacity: 1; 
+                transform: translate(-50%, -50%) scale(1.6) translateZ(0); 
+            }
+            85% {
+                opacity: 1;
+            }
+            100% { 
+                opacity: 0; 
+                transform: translate(-50%, -50%) scale(0.9) translateZ(0); 
+            }
+        }
+
+        /* 文字呼吸動畫：與光暈縮放同步 */
+        @keyframes textBreath {
+            0% { 
+                transform: scale(0.9) translateZ(0); 
+                text-shadow: 0 0 5px rgba(209, 199, 183, 0.5);
+            }
+            50% { 
+                transform: scale(1.1) translateZ(0); 
+                text-shadow: 
+                    0 0 15px rgba(255, 248, 231, 1), 
+                    0 0 30px rgba(209, 199, 183, 0.8);
+            }
+            100% { 
+                transform: scale(0.9) translateZ(0); 
+                text-shadow: 0 0 5px rgba(209, 199, 183, 0.5);
+            }
+        }
+
+        @keyframes inkAppear {
+            0% { opacity: 0; transform: scale(0.8) translateZ(0); }
+            100% { opacity: 1; transform: scale(0.9) translateZ(0); }
         }
     </style>
 </head>
